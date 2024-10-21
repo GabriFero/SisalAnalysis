@@ -1,0 +1,128 @@
+{
+    "CHN CBA D League": {
+        "wins": 1,
+        "losses": 0,
+        "total_bets": 1,
+        "total_stake": 6.0,
+        "total_payout": 13.8,
+        "profit": 7.8,
+        "roi": 130.0
+    },
+    "CHN II Divisione F": {
+        "wins": 1,
+        "losses": 0,
+        "total_bets": 1,
+        "total_stake": 5.0,
+        "total_payout": 14.5,
+        "profit": 9.5,
+        "roi": 190.0
+    },
+    "Challenger Italia": {
+        "wins": 2,
+        "losses": 0,
+        "total_bets": 2,
+        "total_stake": 2.0,
+        "total_payout": 2.87,
+        "profit": 0.87,
+        "roi": 43.5
+    },
+    "ITF Irlanda": {
+        "wins": 1,
+        "losses": 0,
+        "total_bets": 1,
+        "total_stake": 1.0,
+        "total_payout": 3.35,
+        "profit": 2.35,
+        "roi": 235.0
+    },
+    "ATP/WTA Amburgo": {
+        "wins": 1,
+        "losses": 0,
+        "total_bets": 1,
+        "total_stake": 1.0,
+        "total_payout": 1.85,
+        "profit": 0.85,
+        "roi": 85.0
+    },
+    "Challenger Portogallo": {
+        "wins": 1,
+        "losses": 0,
+        "total_bets": 1,
+        "total_stake": 18.0,
+        "total_payout": 39.6,
+        "profit": 21.6,
+        "roi": 120.0
+    },
+    "ARG  Primera  Division": {
+        "wins": 2,
+        "losses": 0,
+        "total_bets": 2,
+        "total_stake": 2.0,
+        "total_payout": 5.15,
+        "profit": 3.15,
+        "roi": 157.5
+    },
+    "ITF Stati Uniti": {
+        "wins": 1,
+        "losses": 0,
+        "total_bets": 1,
+        "total_stake": 1.0,
+        "total_payout": 1.55,
+        "profit": 0.55,
+        "roi": 55.0
+    },
+    "ITF Tunisia": {
+        "wins": 1,
+        "losses": 0,
+        "total_bets": 1,
+        "total_stake": 1.0,
+        "total_payout": 2.9,
+        "profit": 1.9,
+        "roi": 190.0
+    },
+    "WTA Praga": {
+        "wins": 1,
+        "losses": 1,
+        "total_bets": 2,
+        "total_stake": 2.0,
+        "total_payout": 1.72,
+        "profit": -0.28,
+        "roi": -14.0
+    },
+    "Challenger Svizzera": {
+        "wins": 1,
+        "losses": 0,
+        "total_bets": 1,
+        "total_stake": 1.0,
+        "total_payout": 2.75,
+        "profit": 1.75,
+        "roi": 175.0
+    },
+    "Challenger Finlandia": {
+        "wins": 2,
+        "losses": 0,
+        "total_bets": 2,
+        "total_stake": 2.0,
+        "total_payout": 3.55,
+        "profit": 1.55,
+        "roi": 77.5
+    },
+    "MAS Piala MFL": {
+        "wins": 1,
+        "losses": 0,
+        "total_bets": 1,
+        "total_stake": 1.0,
+        "total_payout": 4.75,
+        "profit": 3.75,
+        "roi": 375.0
+    },
+    "Challenger Polonia": {
+        "wins": 1,
+        "losses": 0,
+        "total_bets": 1,
+        "total_stake": 1.0,
+        "total_payout": 1.01,
+        "profit": 0.01,
+        "roi": 1.0
+    }
+}
