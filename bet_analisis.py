@@ -278,13 +278,13 @@ def apply_filters(bets_and_details, sport_filter=None, competition_filter=None, 
 
     return filtered_bets
 
-def get_filtered_competitions(bets_and_details, sport_filter):
+def get_filtered_competitions(bets_and_details, sport_filter=None):
     competitions = set()
     for bet in bets_and_details:
         try:
             sport = bet[1]["result"]["predictions"][0]["sportDescription"]
             competition = bet[1]["result"]["predictions"][0]["competitionDescription"]
-            if sport_filter and sport_filter.lower() == sport.lower():
+            if sport_filter is None or sport_filter.lower() == sport.lower():
                 competitions.add(competition)
         except Exception:
             pass
@@ -297,12 +297,13 @@ def get_filtered_markets(bets_and_details, sport_filter=None, competition_filter
             sport = bet[1]["result"]["predictions"][0]["sportDescription"]
             competition = bet[1]["result"]["predictions"][0]["competitionDescription"]
             market = bet[1]["result"]["predictions"][0]["selectionDescription"]
-            if sport_filter and sport_filter.lower() == sport.lower():
-                if competition_filter is None or competition_filter.lower() == competition.lower():
-                    markets.add(market)
+            if (sport_filter is None or sport_filter.lower() == sport.lower()) and \
+               (competition_filter is None or competition_filter.lower() == competition.lower()):
+                markets.add(market)
         except Exception:
             pass
     return list(markets)
+
 
 def aggregate_info(bets):
     paid = 0
