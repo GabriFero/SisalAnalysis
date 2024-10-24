@@ -131,6 +131,7 @@ def fetch_tickets():
                 response.raise_for_status()
                 content = json.loads(response.content)
                 bets_and_details.append((closed_bet, content))
+                print(bets_and_details)
         except Exception as e:
             print(f"Errore durante il recupero del dettaglio di una scommessa: {e}")
 
@@ -214,6 +215,7 @@ def load_bets():
         with open(os.path.join(export_path, latest_file), "rb") as file:
             bets_and_details = pickle.load(file)
         print(f"Dati caricati da {latest_file}")
+        print(bets_and_details)
         return bets_and_details
     except Exception as e:
         print(f"Errore durante il caricamento: {e}")
@@ -457,12 +459,45 @@ def load_all_bets():
         return []
     
 
+def calculate_total_profit(bets_and_details):
+    total_profit = 0.0
+
+    for bet, details in bets_and_details:
+        try:
+            # Accedi allo stato della scommessa dal primo elemento (bet) della tupla
+            bet_state = bet.get("betState", "").upper()
+
+            # Verifica se esiste la chiave 'predictions' e accedi a 'selectionPrice'
+            if "result" not in details or "predictions" not in details["result"]:
+                continue
+
+            predictions = details["result"]["predictions"]
+
+            if not predictions or "selectionPrice" not in predictions[0]:
+                continue
+
+            # Accedi al prezzo di selezione
+            selection_price = float(predictions[0].get("selectionPrice", 0)) / 100  # Convertiamo in euro (se necessario)
+
+            if bet_state == "PAID":
+                # Win case, aggiungi (selection_price - 1) al profitto totale
+                total_profit += (selection_price - 1)
+            else:
+                # Caso perdente, sottrai 1 dal profitto totale
+                total_profit -= 1
+
+        except (KeyError, ValueError) as e:
+            print(f"Errore durante il calcolo della quota per una selezione: {e}")
+
+    return total_profit
+
+
 def calculate_championship_stats(bets_and_details):
     championship_stats = {}
 
     for bet in bets_and_details:
         try:
-            competition = bet[1]["result"]["predictions"][0]["competitionDescription"]
+            competition = bet[1]["result"].get("predictions", [{}])[0].get("competitionDescription", "")
             bet_info = bet[0]
 
             # Inizializza il dizionario per il campionato se non esiste
@@ -474,7 +509,8 @@ def calculate_championship_stats(bets_and_details):
                     'total_stake': 0.0,
                     'total_payout': 0.0,
                     'profit': 0.0,
-                    'roi': 0.0
+                    'roi': 0.0,
+                    'result_per_stake': 0.0  # Aggiunta del nuovo campo "Risultato per Stake"
                 }
 
             stats = championship_stats[competition]
@@ -493,18 +529,31 @@ def calculate_championship_stats(bets_and_details):
             stats['total_stake'] = round(stats['total_stake'] + stake, 2)
 
             # Determina se la scommessa è vincente o perdente
-            if bet_info.get("betState") == "PAID":  # Considera vincente solo se betState è "PAID"
+            if bet_info.get("betState", "").upper() == "PAID":  # Considera vincente solo se betState è "PAID"
                 stats['wins'] += 1
                 stats['total_payout'] = round(stats['total_payout'] + payout, 2)  # Aggiungi il payout solo se la scommessa è vincente
             else:
                 stats['losses'] += 1  # Qualsiasi stato diverso da "PAID" è considerato perdente
+
+            # Calcola risultato per stake usando le quote
+            for selection in bet[1].get("result", {}).get("selections", []):
+                selection_price = selection.get("selectionPrice", 0) / 100  # Convertiamo selectionPrice in euro (se necessario)
+                status = selection.get("status", "").upper()  # Accedi allo stato direttamente dalla selezione
+
+                # Debug log to verify selection details for result_per_stake calculation
+                print(f"[DEBUG] Selezione: Prezzo: {selection_price}, Stato: {status}")
+
+                if status == "PAID":
+                    stats['result_per_stake'] += (selection_price - 1)
+                elif status != "PAID":
+                    stats['result_per_stake'] -= 1
 
         except KeyError as e:
             print(f"Chiave mancante nell'elaborazione di una scommessa: {e}")
         except ValueError as e:
             print(f"Errore di valore nell'elaborazione di una scommessa: {e}")
         except Exception as e:
-            continue
+            print(f"Errore generico nell'elaborazione di una scommessa: {e}")
 
     # Calcola profitto e ROI per ogni campionato
     for competition, stats in championship_stats.items():
@@ -514,8 +563,15 @@ def calculate_championship_stats(bets_and_details):
         else:
             stats['roi'] = 0.0
 
+        # Aggiungi risultato per stake con due cifre decimali
+        stats['result_per_stake'] = round(stats['result_per_stake'], 2)
+
+    # Aggiungi visualizzazione profitto totale
+    total_profit = calculate_total_profit(bets_and_details)
+    print(f"Profitto totale per tutte le scommesse: {total_profit:.2f}€") 
+
     return championship_stats
- 
+
 
 def save_championship_stats_json(championship_stats):
     username, password, token_jwt, account_id, token = load(CREDENTIALS_PATH)
@@ -564,6 +620,7 @@ def load_user_specific_bets(usernames):
     except Exception as e:
         print(f"Errore durante il caricamento: {e}")
         return []
+
 
 
 def main():
@@ -646,7 +703,8 @@ def main():
             print("2. Top 5 campionati per numero di vittorie")
             print("3. Top 5 campionati per guadagni/ROI")
             print("4. Salva statistiche per ogni campionato")
-            print("5. Back")
+            print("5. Visualizza profitto totale")
+            print("6. Back")
             option = input("Seleziona un'opzione: ")
 
             if option == '1':
@@ -721,6 +779,23 @@ def main():
 
                 # Calcola le statistiche sulle scommesse filtrate
                 stats = aggregate_info(filtered_bets)
+
+                # Calcola `result_per_stake` per le scommesse filtrate
+                result_per_stake = 0.0
+                for bet, details in filtered_bets:
+                    bet_state = bet.get("betState", "").upper()
+
+                    if "result" in details and "predictions" in details["result"]:
+                        predictions = details["result"]["predictions"]
+                        if predictions and "selectionPrice" in predictions[0]:
+                            selection_price = float(predictions[0].get("selectionPrice", 0)) / 100  # Convertiamo in euro (se necessario)
+
+                            if bet_state == "PAID":
+                                result_per_stake += (selection_price - 1)
+                            else:
+                                result_per_stake -= 1
+
+                # Aggiungi il risultato per stake al report
                 titolo_analisi = "Risultati dell'analisi per"
                 if sport_filter:
                     titolo_analisi += f" sport: {sport_filter}"
@@ -738,6 +813,7 @@ def main():
                 print(f"Importo totale vinto: {stats['paid_amount']:.2f}€")
                 print(f"Profitto: {stats['profit']:.2f}€")
                 print(f"ROI: {stats['roi']:.2f}%")
+                print(f"Risultato per Stake (differenza quote): {result_per_stake:.2f}")
 
             elif option == '2':
                 top_wins(bets_and_details)
@@ -747,6 +823,9 @@ def main():
                 championship_stats = calculate_championship_stats(bets_and_details)
                 save_championship_stats_json(championship_stats)
             elif option == '5':
+                total_profit = calculate_total_profit(bets_and_details)
+                print(f"TOTALE DIFFERENZA QUOTE: {total_profit:.2f}")
+            elif option == '6':
                 print("")
                 break
             else:
