@@ -360,21 +360,34 @@ def get_user_input(prompt, allow_back_exit=True):
 
 
 def top_wins(bets_and_details):
-    # Dizionario per tenere traccia delle vittorie per campionato
+    # Dizionari per tenere traccia delle vittorie, delle scommesse totali e del risultato per stake per campionato
     championship_wins = {}
     championship_totals = {}
+    championship_result_per_stake = {}
+
     for bet in bets_and_details:
         try:
             competition = bet[1]["result"]["predictions"][0]["competitionDescription"]
             bet_info = bet[0]
-            bet_state = bet_info.get("betState", "UNKNOWN")
+            bet_state = bet_info.get("betState", "UNKNOWN").upper()
+
+            # Inizializza il risultato per stake se non esiste ancora
+            if competition not in championship_result_per_stake:
+                championship_result_per_stake[competition] = 0.0
 
             # Controlla lo stato della scommessa
-            if bet_state != "PAID":
-                pass  # Non incrementare le vittorie
-            else:
-                # Considera tutte le scommesse non perdenti come vincenti
+            if bet_state == "PAID":
+                # Se la scommessa è vincente, incrementa le vittorie
                 championship_wins[competition] = championship_wins.get(competition, 0) + 1
+
+                # Calcola result_per_stake aggiungendo (selection_price - 1)
+                selection_price = bet[1]["result"]["predictions"][0].get("selectionPrice", 0) / 100
+                championship_result_per_stake[competition] += (selection_price - 1)
+            else:
+                # Se perdente, sottrai 1 dal risultato per stake
+                championship_result_per_stake[competition] -= 1
+
+            # Aggiorna il numero totale di scommesse per il campionato
             championship_totals[competition] = championship_totals.get(competition, 0) + 1
         except Exception as e:
             print(f"Errore: {e}")
@@ -394,18 +407,19 @@ def top_wins(bets_and_details):
     top_n = 5
     print("\nTop 5 campionati per tasso di vittoria:")
     for comp, rate in sorted_championships[:top_n]:
-        print(f"{comp}: {rate:.2f}% vittorie su {championship_totals[comp]} scommesse")
+        print(f"{comp}: {rate:.2f}% vittorie su {championship_totals[comp]} scommesse, Risultato per Stake: {championship_result_per_stake[comp]:.2f}")
 
     print("\nPeggiori 5 campionati per tasso di vittoria:")
     for comp, rate in sorted_championships[-top_n:]:
-        print(f"{comp}: {rate:.2f}% vittorie su {championship_totals[comp]} scommesse")
-
+        print(f"{comp}: {rate:.2f}% vittorie su {championship_totals[comp]} scommesse, Risultato per Stake: {championship_result_per_stake[comp]:.2f}")
 
 
 def top_roi(bets_and_details):
-    # Dizionario per tenere traccia dei guadagni e delle puntate per campionato
+    # Dizionari per tenere traccia dei guadagni, delle puntate e del risultato per stake per campionato
     championship_profits = {}
     championship_stakes = {}
+    championship_result_per_stake = {}
+
     for bet in bets_and_details:
         try:
             competition = bet[1]["result"]["predictions"][0]["competitionDescription"]
@@ -413,8 +427,24 @@ def top_roi(bets_and_details):
             stake = bet_info.get("stakeAmount", 0) / 100  # Converti in euro
             payout = bet_info.get("paidAmount", 0) / 100  # Converti in euro
             profit = payout - stake
+
+            # Inizializza il risultato per stake se non esiste ancora
+            if competition not in championship_result_per_stake:
+                championship_result_per_stake[competition] = 0.0
+
+            # Aggiorna i profitti e le puntate per campionato
             championship_profits[competition] = championship_profits.get(competition, 0) + profit
             championship_stakes[competition] = championship_stakes.get(competition, 0) + stake
+
+            # Calcola risultato per stake
+            bet_state = bet_info.get("betState", "UNKNOWN").upper()
+            selection_price = bet[1]["result"]["predictions"][0].get("selectionPrice", 0) / 100
+
+            if bet_state == "PAID":
+                championship_result_per_stake[competition] += (selection_price - 1)
+            else:
+                championship_result_per_stake[competition] -= 1
+
         except Exception:
             pass
 
@@ -432,11 +462,11 @@ def top_roi(bets_and_details):
     top_n = 5
     print("\nTop 5 campionati per ROI:")
     for comp, roi in sorted_championships[:top_n]:
-        print(f"{comp}: ROI {roi:.2f}% su {championship_stakes[comp]:.2f}€ puntati")
+        print(f"{comp}: ROI {roi:.2f}% su {championship_stakes[comp]:.2f}€ puntati, Risultato per Stake: {championship_result_per_stake[comp]:.2f}")
 
     print("\nPeggiori 5 campionati per ROI:")
     for comp, roi in sorted_championships[-top_n:]:
-        print(f"{comp}: ROI {roi:.2f}% su {championship_stakes[comp]:.2f}€ puntati")
+        print(f"{comp}: ROI {roi:.2f}% su {championship_stakes[comp]:.2f}€ puntati, Risultato per Stake: {championship_result_per_stake[comp]:.2f}")
 
 
 def load_all_bets():
@@ -497,7 +527,8 @@ def calculate_championship_stats(bets_and_details):
 
     for bet in bets_and_details:
         try:
-            competition = bet[1]["result"].get("predictions", [{}])[0].get("competitionDescription", "")
+            # Accedi alla descrizione della competizione
+            competition = bet[1]["result"]["predictions"][0].get("competitionDescription", "")
             bet_info = bet[0]
 
             # Inizializza il dizionario per il campionato se non esiste
@@ -529,24 +560,19 @@ def calculate_championship_stats(bets_and_details):
             stats['total_stake'] = round(stats['total_stake'] + stake, 2)
 
             # Determina se la scommessa è vincente o perdente
-            if bet_info.get("betState", "").upper() == "PAID":  # Considera vincente solo se betState è "PAID"
+            bet_state = bet_info.get("betState", "").upper()
+            if bet_state == "PAID":  # Considera vincente solo se betState è "PAID"
                 stats['wins'] += 1
-                stats['total_payout'] = round(stats['total_payout'] + payout, 2)  # Aggiungi il payout solo se la scommessa è vincente
+                stats['total_payout'] = round(stats['total_payout'] + payout, 2)
             else:
-                stats['losses'] += 1  # Qualsiasi stato diverso da "PAID" è considerato perdente
+                stats['losses'] += 1
 
-            # Calcola risultato per stake usando le quote
-            for selection in bet[1].get("result", {}).get("selections", []):
-                selection_price = selection.get("selectionPrice", 0) / 100  # Convertiamo selectionPrice in euro (se necessario)
-                status = selection.get("status", "").upper()  # Accedi allo stato direttamente dalla selezione
-
-                # Debug log to verify selection details for result_per_stake calculation
-                print(f"[DEBUG] Selezione: Prezzo: {selection_price}, Stato: {status}")
-
-                if status == "PAID":
-                    stats['result_per_stake'] += (selection_price - 1)
-                elif status != "PAID":
-                    stats['result_per_stake'] -= 1
+            # Calcola risultato per stake usando `selectionPrice`
+            selection_price = bet[1]["result"]["predictions"][0].get("selectionPrice", 0) / 100  # Convertiamo selectionPrice in euro
+            if bet_state == "PAID":
+                stats['result_per_stake'] += (selection_price - 1)
+            else:
+                stats['result_per_stake'] -= 1
 
         except KeyError as e:
             print(f"Chiave mancante nell'elaborazione di una scommessa: {e}")
@@ -565,10 +591,6 @@ def calculate_championship_stats(bets_and_details):
 
         # Aggiungi risultato per stake con due cifre decimali
         stats['result_per_stake'] = round(stats['result_per_stake'], 2)
-
-    # Aggiungi visualizzazione profitto totale
-    total_profit = calculate_total_profit(bets_and_details)
-    print(f"Profitto totale per tutte le scommesse: {total_profit:.2f}€") 
 
     return championship_stats
 
